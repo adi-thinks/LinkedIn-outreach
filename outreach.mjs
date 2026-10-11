@@ -1,35 +1,13 @@
-// LinkedIn recruiter outreach (Java/backend). Run on YOUR computer: `node outreach.mjs [--max 20] [--dry]`
+// LinkedIn recruiter outreach (BA / Data Analyst / Product Manager). Run on YOUR computer: `node outreach.mjs [--max 20] [--dry]`
 // First run: a Chromium window opens, log in to LinkedIn yourself (session is kept in ./profile).
 import { chromium } from 'playwright';
 import fs from 'node:fs';
+import { PROFILE_LABEL, noteFor, SEARCHES, IS_RECRUITER, OK, BAD, BAD_ROLE } from './config.mjs';
 
 const args = process.argv.slice(2);
 const MAX = Number(args[args.indexOf('--max') + 1]) || 20;   // hard cap 20 per run
 const DRY = args.includes('--dry');                          // go through everything, but don't click Send
 const CAP = Math.min(MAX, 20);
-
-const NOTE = (first) =>
-  `Hi ${first}, I'm Dinesh, ex-Senior Software Engineer at Rapid7 (immediate joiner), 6+ yrs in Java, Spring Boot, microservices & AWS. If you have Senior Java/backend openings, I'd love to share my resume. Thanks!`;
-
-// Locations: Pune/Pimpri-Chinchwad first, then India-wide as fallback.
-const PUNE = '90009642', INDIA = '102713980';
-const enc = encodeURIComponent;
-const url = (kw, p, hiring, geo) =>
-  `https://www.linkedin.com/search/results/people/?keywords=${enc(kw)}&geoUrn=${enc(`["${geo}"]`)}${hiring ? `&activelyHiringForJobTitles=${enc('["-100"]')}` : ''}&network=${enc('["S","O"]')}&page=${p}`;
-// Ordered by quality; later searches only run if the pool is still short.
-const SEARCHES = [
-  (p) => url('java recruiter', p, true, PUNE),
-  (p) => url('java recruiter', p, false, PUNE),
-  (p) => url('technical recruiter backend', p, false, PUNE),
-  (p) => url('java recruiter', p, true, INDIA),
-  (p) => url('java recruiter', p, false, INDIA),
-  (p) => url('technical recruiter backend', p, false, INDIA),
-];
-// Must look like a recruiter AND a tech/Java hirer; reject the obvious wrong fits.
-const IS_RECRUITER = /recruit|talent acquisition|\bTA\b|sourc|hiring/i;
-const OK  = /java|backend|back-end|spring|microservice|j2ee|full.?stack|software engineer|\bSDE\b|it recruit|tech(nical)? (recruit|talent|hiring)/i;
-const BAD = /servicenow|salesforce|\bsap\b|network|sysadmin|\bqa\b|testing|campus|fresher|intern\b|graduate hiring|entry.?level|hrbp|payroll|open to (hr|work)|non-?tech|bpo|executive search|c-?suite|leadership hiring|investment banking|automotive|embedded|actively looking|\.net only|data engineer|devops only|mainframe/i;
-const BAD_ROLE = /junior|associate|sde\s*-?\s*1\b|fresher|principal|staff|architect|manager|director|account executive|react|angular|frontend|front-end|\.net|salesforce|servicenow|\bsap\b|teamcenter|\bqa\b|tester/i;
 
 const STATE = 'state.json';
 const state = fs.existsSync(STATE) ? JSON.parse(fs.readFileSync(STATE, 'utf8')) : { done: {} };
@@ -42,7 +20,7 @@ const log = (...a) => console.log(clock(), ...a);
 const bar = (n, total, w = 20) => { const f = Math.round((n / total) * w); return cyan('█'.repeat(f)) + dim('░'.repeat(w - f)); };
 const box = (lines) => { const w = Math.max(...lines.map((l) => l.replace(/\x1b\[\d+m/g, '').length)) + 4; const line = '─'.repeat(w); console.log(cyan('╭' + line + '╮')); for (const l of lines) console.log(cyan('│') + '  ' + l + ' '.repeat(w - 2 - l.replace(/\x1b\[\d+m/g, '').length) + cyan('│')); console.log(cyan('╰' + line + '╯')); };
 const stats = { sent: 0, skipped: 0, errors: 0 };
-box([bold('LinkedIn recruiter outreach'), dim(`Java backend · target ${CAP} invites · ${DRY ? yellow('DRY RUN (nothing is sent)') : green('LIVE')}`)]);
+box([bold('LinkedIn recruiter outreach'), dim(`${PROFILE_LABEL} · target ${CAP} invites · ${DRY ? yellow('DRY RUN (nothing is sent)') : green('LIVE')}`)]);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const jitter = (a, b) => sleep(a + Math.random() * (b - a));
 
@@ -161,7 +139,7 @@ async function sendTo(id) {
     }
     step = 'type note';
     await box.waitFor({ state: 'visible', timeout: 8000 });
-    await box.click(); await box.fill(NOTE(first));
+    await box.click(); await box.fill(noteFor(first));
     if (DRY) {
       await page.keyboard.press('Escape'); await sleep(700);
       const discard = page.getByRole('button', { name: /^discard$/i });
